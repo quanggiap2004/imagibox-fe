@@ -3,13 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { storyService } from '@/services/story.service';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { ChapterResponseDto } from '@/types';
+import { Loader2, ArrowLeft, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function InteractiveStoryReader() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const logout = useAuthStore((state) => state.logout);
     const storyId = Number(id);
 
     // Fetch story metadata for title
@@ -38,7 +39,7 @@ export default function InteractiveStoryReader() {
     const nextChapterMutation = useMutation({
         mutationFn: (choice: 'A' | 'B') =>
             storyService.generateNextChapter(storyId, { userChoice: choice }),
-        onSuccess: (newChapter) => {
+        onSuccess: () => {
             // Invalidate chapters query to refetch all chapters
             queryClient.invalidateQueries({ queryKey: ['chapters', storyId] });
             queryClient.invalidateQueries({ queryKey: ['story', storyId] });
@@ -72,6 +73,11 @@ export default function InteractiveStoryReader() {
         }
     };
 
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
     if (isLoading) {
         return (
             <div className="flex h-screen items-center justify-center">
@@ -95,6 +101,9 @@ export default function InteractiveStoryReader() {
                 <div className="text-xs text-muted-foreground px-2 py-1 bg-secondary rounded-full">
                     Chapter {currentChapter.chapterNumber} of {chapters.length}
                 </div>
+                <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
+                    <LogOut className="h-5 w-5" />
+                </Button>
             </div>
 
             <div className="max-w-3xl mx-auto p-4 space-y-8 mt-4">

@@ -4,6 +4,7 @@ import { analyticsService } from '@/services/analytics.service';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { LogOut } from 'lucide-react';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -33,8 +34,8 @@ export default function ParentDashboard() {
                     <Link to="/create-kid">
                         <Button>Add New Kid Profile</Button>
                     </Link>
-                    <Button variant="outline" onClick={handleLogout}>
-                        Logout
+                    <Button variant="outline" onClick={handleLogout} className="gap-2">
+                        <LogOut className="h-4 w-4" /> Logout
                     </Button>
                 </div>
             </header>

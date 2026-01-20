@@ -4,13 +4,15 @@ import CanvasDraw from 'react-canvas-draw';
 import { useMutation } from '@tanstack/react-query';
 import { storyService } from '@/services/story.service';
 import { Button } from '@/components/ui/button';
-import { Wand2, Pencil, Loader2 } from 'lucide-react';
+import { Wand2, Pencil, Loader2, LogOut, ArrowLeft } from 'lucide-react';
 import type { GenerateStoryRequest } from '@/types';
+import { useAuthStore } from '@/store/useAuthStore';
 
 type Step = 'PROMPT' | 'SKETCH' | 'PREVIEW';
 
 export default function StoryCreationWizard() {
     const navigate = useNavigate();
+    const logout = useAuthStore((state) => state.logout);
     const [step, setStep] = useState<Step>('PROMPT');
     const [prompt, setPrompt] = useState('');
     const [mood, setMood] = useState('Adventurous');
@@ -100,8 +102,22 @@ export default function StoryCreationWizard() {
         });
     };
 
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
     return (
         <div className="min-h-screen bg-background p-4 flex flex-col items-center">
+            {/* Header with back and logout */}
+            <div className="w-full max-w-2xl mb-4 flex justify-between items-center">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/stories')} className="gap-2">
+                    <ArrowLeft className="h-4 w-4" /> Back to Library
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
+                    <LogOut className="h-4 w-4" /> Logout
+                </Button>
+            </div>
             <div className="w-full max-w-2xl bg-card rounded-xl shadow-xl border p-6">
 
                 <div className="flex justify-between mb-8">

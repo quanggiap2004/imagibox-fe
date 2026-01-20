@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { storyService } from '@/services/story.service';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Loader2, BookOpen, Clock, Trash2, Plus } from 'lucide-react';
+import { Loader2, BookOpen, Clock, Trash2, Plus, LogOut } from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function StoryLibrary() {
+    const navigate = useNavigate();
+    const logout = useAuthStore((state) => state.logout);
     const [page, setPage] = useState(0);
 
     const { data, isLoading, refetch } = useQuery({
@@ -15,11 +18,16 @@ export default function StoryLibrary() {
     });
 
     const handleDelete = async (e: React.MouseEvent, id: number) => {
-        e.preventDefault(); // Prevent navigation
+        e.preventDefault();
         if (confirm('Are you sure you want to delete this story?')) {
             await storyService.deleteStory(id);
             refetch();
         }
+    };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
     };
 
     return (
@@ -29,11 +37,16 @@ export default function StoryLibrary() {
                     <h1 className="text-3xl font-heading font-bold text-primary">My Library</h1>
                     <p className="text-muted-foreground">All your magical adventures</p>
                 </div>
-                <Link to="/create-story">
-                    <Button className="gap-2">
-                        <Plus className="h-4 w-4" /> New Story
+                <div className="flex gap-2">
+                    <Link to="/create-story">
+                        <Button className="gap-2">
+                            <Plus className="h-4 w-4" /> New Story
+                        </Button>
+                    </Link>
+                    <Button variant="outline" onClick={handleLogout} className="gap-2">
+                        <LogOut className="h-4 w-4" /> Logout
                     </Button>
-                </Link>
+                </div>
             </div>
 
             {isLoading ? (
