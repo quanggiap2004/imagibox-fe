@@ -74,6 +74,11 @@ export const storyService = {
         return response.data;
     },
 
+    async getChaptersByStoryId(storyId: number): Promise<ChapterResponseDto[]> {
+        const response = await apiService.get<ChapterResponseDto[]>(`/stories/${storyId}/chapters`);
+        return response.data;
+    },
+
     async deleteStory(storyId: number): Promise<void> {
         await apiService.delete(`/stories/${storyId}`);
     },

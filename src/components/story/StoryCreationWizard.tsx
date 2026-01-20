@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CanvasDraw from 'react-canvas-draw';
 import { useMutation } from '@tanstack/react-query';
@@ -17,6 +17,38 @@ export default function StoryCreationWizard() {
     const [mode, setMode] = useState<'ONE_SHOT' | 'INTERACTIVE'>('ONE_SHOT');
 
     const canvasRef = useRef<CanvasDraw>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [canvasSize, setCanvasSize] = useState({ width: 400, height: 300 });
+    const [sketchFile, setSketchFile] = useState<File | null>(null);
+    const [canvasSaveData, setCanvasSaveData] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (step === 'SKETCH' && canvasSaveData && canvasRef.current) {
+            const timer = setTimeout(() => {
+                if (canvasRef.current) {
+                    // @ts-ignore
+                    canvasRef.current.loadSaveData(canvasSaveData, true);
+                    console.log('Canvas drawing restored');
+                }
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [step, canvasSaveData, canvasSize]);
+
+    // Resize canvas to fit container
+    useEffect(() => {
+        const updateCanvasSize = () => {
+            if (containerRef.current) {
+                const containerWidth = containerRef.current.offsetWidth - 32;
+                const height = Math.round(containerWidth * 0.6);
+                setCanvasSize({ width: containerWidth, height });
+            }
+        };
+
+        updateCanvasSize();
+        window.addEventListener('resize', updateCanvasSize);
+        return () => window.removeEventListener('resize', updateCanvasSize);
+    }, [step]);
 
     const createStoryMutation = useMutation({
         mutationFn: (data: GenerateStoryRequest) => {
@@ -25,39 +57,46 @@ export default function StoryCreationWizard() {
                 : storyService.generateInteractive(data);
         },
         onSuccess: (data) => {
-            if (mode === 'INTERACTIVE') {
-                navigate(`/stories/${data.id}/play`);
-            } else {
-                navigate(`/stories/${data.id}`);
-            }
+            navigate(`/stories/${data.id}/play`);
         }
     });
 
-    const handleNext = () => {
-        if (step === 'PROMPT') setStep('SKETCH');
-        else if (step === 'SKETCH') {
+    const handleNext = async () => {
+        if (step === 'PROMPT') {
+            setStep('SKETCH');
+        } else if (step === 'SKETCH') {
             if (canvasRef.current) {
+                // @ts-ignore - getSaveData returns JSON with lines array
+                const saveData = canvasRef.current.getSaveData();
+                const parsed = JSON.parse(saveData);
 
+                if (parsed.lines && parsed.lines.length > 0) {
+                    // Save canvas data for restoration if user comes back
+                    setCanvasSaveData(saveData);
+
+                    // @ts-ignore - access internal canvas to get data url
+                    const dataUrl = canvasRef.current.getDataURL('png', false, '#ffffff');
+                    const res = await fetch(dataUrl);
+                    const blob = await res.blob();
+                    const file = new File([blob], 'sketch.png', { type: 'image/png' });
+                    setSketchFile(file);
+                    console.log('Sketch captured:', file.size, 'bytes');
+                } else {
+                    setSketchFile(null);
+                    setCanvasSaveData(null);
+                    console.log('No drawing detected');
+                }
             }
             setStep('PREVIEW');
         }
     };
 
-    const handleCreate = async () => {
-        let sketchFile: File | undefined = undefined;
-        if (canvasRef.current) {
-            // @ts-ignore - access internal canvas to get data url
-            const dataUrl = canvasRef.current.getDataURL();
-            const res = await fetch(dataUrl);
-            const blob = await res.blob();
-            sketchFile = new File([blob], "sketch.png", { type: "image/png" });
-        }
-
+    const handleCreate = () => {
         createStoryMutation.mutate({
             prompt,
             mood,
             mode,
-            sketch: sketchFile
+            sketch: sketchFile || undefined
         });
     };
 
@@ -149,20 +188,24 @@ export default function StoryCreationWizard() {
                             <p className="text-muted-foreground">Draw something to include in your story (optional)</p>
                         </div>
 
-                        <div className="border-2 border-dashed rounded-xl p-4 flex justify-center bg-white overflow-hidden relative">
+                        <div ref={containerRef} className="border-2 border-dashed rounded-xl p-4 flex justify-center bg-white overflow-hidden relative">
                             <CanvasDraw
                                 ref={canvasRef}
                                 brushRadius={3}
                                 lazyRadius={0}
-                                canvasWidth={400}
-                                canvasHeight={300}
+                                canvasWidth={canvasSize.width}
+                                canvasHeight={canvasSize.height}
                                 hideGrid={true}
                             />
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                className="absolute top-2 right-2"
-                                onClick={() => canvasRef.current?.clear()}
+                                className="absolute top-2 right-2 z-10 bg-white hover:bg-gray-100 text-gray-700 border-gray-300"
+                                onClick={() => {
+                                    canvasRef.current?.clear();
+                                    setCanvasSaveData(null);
+                                    setSketchFile(null);
+                                }}
                             >
                                 Clear
                             </Button>

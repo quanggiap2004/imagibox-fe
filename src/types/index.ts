@@ -60,7 +60,8 @@ export interface ChapterResponseDto {
     chapterNumber: number;
     content: {
         text: string;
-        title: string;
+        title?: string;  // Optional - not always present in API response
+        moral?: string;  // Optional - only for one-shot stories
     };
     imageUrl: string | null;
     originalSketchUrl: string | null;
